@@ -1,16 +1,15 @@
 library jaguar_serializer.generator.helpers;
 
-import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/constant/value.dart';
-import 'package:source_gen/source_gen.dart';
+import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:jaguar_serializer/jaguar_serializer.dart';
-
 import 'package:jaguar_serializer_cli/src/info/info.dart';
 import 'package:jaguar_serializer_cli/src/info/info.dart' as $info;
+import 'package:jaguar_serializer_cli/src/utils/exceptions.dart';
 import 'package:jaguar_serializer_cli/src/utils/string.dart';
 import 'package:jaguar_serializer_cli/src/utils/type_checkers.dart';
-import 'package:jaguar_serializer_cli/src/utils/exceptions.dart';
+import 'package:source_gen/source_gen.dart';
 
 List<ClassElement> _findSerializerInLib(
     Set<LibraryElement> seen, LibraryElement lib, DartType type) {
@@ -57,7 +56,16 @@ class AnnotationParser {
   /// Model type
   DartType modelType;
 
-  ClassElement modelClass;
+  ClassElement get modelClass {
+    if (modelType.element is TypeParameterElement) {
+      typeParameter = modelType.element as TypeParameterElement;
+      return typeParameter.bound.element as ClassElement;
+    } else {
+      return modelType.element as ClassElement;
+    }
+  }
+
+  TypeParameterElement typeParameter;
 
   /// Should fields be included by default
   bool includeByDefault;
@@ -95,10 +103,12 @@ class AnnotationParser {
     }
     _makeCtor();
     _parseFieldFormatter(obj.peek('nameFormatter'));
+
     return SerializerInfo(element.name, modelClass.displayName, fields,
         ctorArguments: ctorArguments,
         ctorNamedArguments: ctorNamedArguments,
-        nameFormatter: nameFormatter);
+        nameFormatter: nameFormatter,
+        typeParameterName: typeParameter?.displayName);
   }
 
   /// Parses [modelType] of the Serializer
@@ -110,8 +120,8 @@ class AnnotationParser {
     InterfaceType i = element.allSupertypes
         .firstWhere((InterfaceType i) => isSerializer.isExactly(i.element));
     modelType = i.typeArguments.first;
+
     if (modelType.isDynamic) throw JCException('Model cannot be dynamic!');
-    modelClass = modelType.element as ClassElement;
 
     bool isNotStaticOrPrivate(PropertyAccessorElement e) =>
         !e.isStatic && !e.isPrivate;
@@ -191,10 +201,12 @@ class AnnotationParser {
       bool nullable = globalNullable;
       FieldProcessorInfo processor;
       if (annot != null) {
-        dontEncode =
-            annot.getField('dontEncode').toBoolValue() ?? false ? true : dontEncode;
-        dontDecode =
-            annot.getField('dontDecode').toBoolValue() ?? false ? true : dontDecode;
+        dontEncode = annot.getField('dontEncode').toBoolValue() ?? false
+            ? true
+            : dontEncode;
+        dontDecode = annot.getField('dontDecode').toBoolValue() ?? false
+            ? true
+            : dontDecode;
 
         encodeTo = annot.getField('encodeTo')?.toStringValue() ?? encodeTo;
         decodeFrom =
@@ -242,7 +254,9 @@ class AnnotationParser {
         throw JCException('serializers must be sub-type of Serializer!');
       }
 
+      print("_parseSerializers about to cast...");
       final ClassElement v = t.element as ClassElement;
+      print("_parseSerializers CAST WORKED!!!!");
       final InterfaceType i = v.allSupertypes
           .where((InterfaceType i) => isSerializer.isExactly(i.element))
           .first;
@@ -326,8 +340,7 @@ class AnnotationParser {
   }
 
   void _makeCtor() {
-    ConstructorElement ctor =
-        (modelType.element as ClassElement).unnamedConstructor;
+    ConstructorElement ctor = modelClass.unnamedConstructor;
     if (ctor == null)
       throw JCException("Model does not have a default constructor!");
 

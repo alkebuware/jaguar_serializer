@@ -1,7 +1,7 @@
-import 'package:meta/meta.dart';
-import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:jaguar_serializer_cli/src/utils/type_checkers.dart';
+import 'package:meta/meta.dart';
 
 class CtorArgument {
   final ParameterElement param;
@@ -17,21 +17,28 @@ class SerializerInfo {
   /// Name of the serializer
   final String name;
   final String modelName;
+  final String typeParameterName;
   final Map<String, Field> fields;
   final List<CtorArgument> ctorArguments;
   final List<ParameterElement> ctorNamedArguments;
   String nameFormatter;
 
   SerializerInfo(this.name, this.modelName, this.fields,
-      {this.ctorArguments, this.ctorNamedArguments, this.nameFormatter});
+      {this.ctorArguments,
+        this.ctorNamedArguments,
+        this.nameFormatter,
+        this.typeParameterName});
 }
 
 class FieldProcessorInfo {
   String get instantiationString => self.element.displayName;
+
   String get serializedStr => serialized.displayName;
+
   String get deserializedStr => deserialized.displayName;
 
   DartType get serialized => fp.typeArguments[1];
+
   DartType get deserialized => fp.typeArguments[0];
 
   final ParameterizedType self;
@@ -88,6 +95,7 @@ class MapTypeInfo implements TypeInfo {
   final TypeInfo valueInfo;
 
   final String valueTypeStr;
+
   MapTypeInfo(
       this.keyInfo, this.keyTypeString, this.valueInfo, this.valueTypeStr);
 }
@@ -95,12 +103,14 @@ class MapTypeInfo implements TypeInfo {
 class ListTypeInfo implements TypeInfo {
   final TypeInfo itemInfo;
   final String itemTypeStr;
+
   ListTypeInfo(this.itemInfo, this.itemTypeStr);
 }
 
 class SetTypeInfo implements TypeInfo {
   final TypeInfo itemInfo;
   final String itemTypeStr;
+
   SetTypeInfo(this.itemInfo, this.itemTypeStr);
 }
 
@@ -108,11 +118,13 @@ abstract class LeafTypeInfo implements TypeInfo {}
 
 class BuiltinTypeInfo implements LeafTypeInfo {
   final String typeStr;
+
   BuiltinTypeInfo(this.typeStr);
 }
 
 class EnumTypeInfo implements LeafTypeInfo {
   final String typeStr;
+
   EnumTypeInfo(this.typeStr);
 }
 
@@ -121,6 +133,7 @@ class ProcessedTypeInfo implements LeafTypeInfo {
   final String serializedType;
   final String deserializedType;
   final String respType;
+
   ProcessedTypeInfo(this.instantiationString, this.serializedType,
       this.deserializedType, this.respType);
 }
@@ -128,5 +141,6 @@ class ProcessedTypeInfo implements LeafTypeInfo {
 class SerializedTypeInfo implements LeafTypeInfo {
   final String instantiationString;
   final String type;
+
   SerializedTypeInfo(this.instantiationString, this.type);
 }

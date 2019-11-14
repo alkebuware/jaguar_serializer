@@ -5,8 +5,9 @@ import 'package:jaguar_serializer_cli/src/info/info.dart';
 import 'package:jaguar_serializer_cli/src/utils/exceptions.dart';
 import 'package:jaguar_serializer_cli/src/utils/string.dart';
 
-part 'to.dart';
 part 'from.dart';
+
+part 'to.dart';
 
 class Writer {
   final SerializerInfo info;
@@ -19,10 +20,47 @@ class Writer {
 
   String get modelName => info.modelName;
 
+  String get typeParameterNameOrEmpty =>
+      info.typeParameterName == null ? "" : "<${info.typeParameterName}>";
+
+  String get classTypeParameter {
+    if (info.typeParameterName?.isNotEmpty == true) {
+      return "<${info.typeParameterName} extends $modelName>";
+    } else {
+      return "";
+    }
+  }
+
+  String get superClassTypeParameter {
+    if (info.typeParameterName?.isNotEmpty == true) {
+      return info.typeParameterName;
+    } else {
+      return "$modelName";
+    }
+  }
+
   String toString() => _w.toString();
 
   void generate() {
-    _w.writeln('abstract class _\$$name implements Serializer<$modelName> {');
+    if (info.typeParameterName?.isNotEmpty == true) {
+      _w.writeln(
+          "typedef PlatformType FromShared${classTypeParameter}($modelName model);");
+      _w.writeln(
+          "mixin CodecOptionsMixin${classTypeParameter} { "
+              "FromShared$typeParameterNameOrEmpty get toPlatformModel;"
+              "List<String> get encodeIgnore;"
+              "List<String> get decodeIgnore; "
+              "}");
+    }
+
+    _w.write(
+        'abstract class _\$$name${classTypeParameter} implements Serializer<$superClassTypeParameter>');
+
+    if (info.typeParameterName?.isNotEmpty == true) {
+      _w.write(", CodecOptionsMixin$typeParameterNameOrEmpty ");
+    }
+
+    _w.writeln("{");
 
     _writeMakers();
 
@@ -88,7 +126,7 @@ class Writer {
 
   void _toWriter() {
     _w.writeln('@override');
-    _w.writeln('Map<String, dynamic> toMap($modelName model) {');
+    _w.writeln('Map<String, dynamic> toMap($superClassTypeParameter model) {');
     _w.writeln('if(model == null) return null;');
     _w.writeln(r'Map<String, dynamic> ret = <String, dynamic>{};');
     for (Field item in info.fields.values.where((f) => !f.dontEncode)) {
@@ -100,7 +138,7 @@ class Writer {
 
   void _fromWriter() {
     _w.writeln('@override');
-    _w.writeln('$modelName fromMap(Map map) {');
+    _w.writeln('$superClassTypeParameter fromMap(Map map) {');
     _w.writeln(r'if(map == null) return null;');
 
     _w.write("final obj = ");
@@ -116,7 +154,7 @@ class Writer {
       _w.write(';');
     }
 
-    _w.writeln(r'return obj;');
+    _w.writeln(r'return toPlatformModel == null ? obj : toPlatformModel(obj);');
     _w.writeln(r'}');
   }
 

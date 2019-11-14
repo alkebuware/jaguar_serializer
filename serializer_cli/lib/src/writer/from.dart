@@ -127,6 +127,6 @@ class FromItemWriter {
     if (!field.isNullable || isCtor)
       sb.write(" ?? getJserDefault('${field.name}')");
     if (!field.isNullable && !isCtor) sb.write(" ?? obj.${field.name}");
-    return sb.toString();
+    return "decodeIgnore?.contains($key) == true ? null : (${sb})";
   }
 }

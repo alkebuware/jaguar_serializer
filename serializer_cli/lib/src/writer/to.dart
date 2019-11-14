@@ -106,19 +106,25 @@ class ToItemWriter {
 
   String generate() {
     var sb = StringBuffer();
+    String encodeToName;
+    if (hasGlobalNameForamtter && field.name == field.encodeTo) {
+      encodeToName = "_jserNameMapping['${field.name}']";
+    } else {
+      encodeToName = "'${field.encodeTo}'";
+    }
+
+    sb.writeln(
+        "if (encodeIgnore == null || encodeIgnore?.contains($encodeToName) == false) {");
     if (field.isNullable) {
       sb.write('setMapValue(ret,');
     } else {
       sb.write('setMapValueIfNotNull(ret,');
     }
-    if (hasGlobalNameForamtter && field.name == field.encodeTo) {
-      sb.write("_jserNameMapping['${field.name}']");
-    } else {
-      sb.write("'${field.encodeTo}'");
-    }
+    sb.write(encodeToName);
     sb.write(",");
     sb.write(_makeValue('model.${field.name}', field.typeInfo));
-    sb.write(");");
+    sb.writeln(");");
+    sb.write("}");
     return sb.toString();
   }
 }
