@@ -254,14 +254,19 @@ class AnnotationParser {
         throw JCException('serializers must be sub-type of Serializer!');
       }
 
-      print("_parseSerializers about to cast...");
       final ClassElement v = t.element as ClassElement;
-      print("_parseSerializers CAST WORKED!!!!");
       final InterfaceType i = v.allSupertypes
           .where((InterfaceType i) => isSerializer.isExactly(i.element))
           .first;
 
-      final DartType key = i.typeArguments[0];
+      DartType key;
+      if (i.typeArguments.first is InterfaceType) {
+        key = i.typeArguments.first;
+      } else if (i.typeArguments.first is TypeParameterType) {
+        key = (i.typeArguments.first.element as TypeParameterElement).bound;
+      } else {
+        throw "Unsupported type arguments ${i.typeArguments.first}";
+      }
       providers[key as InterfaceType] = v;
     });
   }
